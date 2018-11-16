@@ -1,5 +1,5 @@
 {
-    "name": "Coobix/Util",
+    "name": "Coobix/util",
     "description": "Useful things shared between projects",
     "keywords": ["file", "formatting", "Symfony"],
     "license": "MIT",
