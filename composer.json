@@ -1,5 +1,5 @@
 {
-    "name": "Coobix/Util",
+    "name": "coobix/util",
     "description": "Useful things shared between projects",
     "keywords": ["file", "formatting", "Symfony"],
     "license": "MIT",
@@ -13,7 +13,9 @@
         "php": ">=5.3.2"
     },
     "autoload": {
-        "psr-0": { "Coobix\\Util": "" }
+        "psr-4": {
+            "Coobix\\Util": "src/"
+        }
     },
     "target-dir": "Coobix/Util",
     "extra": {}
