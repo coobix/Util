@@ -1,0 +1,20 @@
+{
+    "name": "Coobix/Util",
+    "description": "Useful things shared between projects",
+    "keywords": ["file", "formatting", "Symfony"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Nicolás Rizo",
+            "email": "nicolas.nrizo@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.2"
+    },
+    "autoload": {
+        "psr-0": { "Coobix\\Util": "" }
+    },
+    "target-dir": "Coobix/Util",
+    "extra": {}
+}
