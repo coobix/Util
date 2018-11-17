@@ -17,6 +17,5 @@
             "Coobix\\Util": "src/"
         }
     },
-    "target-dir": "Coobix/Util",
     "extra": {}
 }
