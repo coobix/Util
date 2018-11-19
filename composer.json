@@ -17,5 +17,10 @@
             "Coobix\\Util\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Coobix\\Util\\Test\\": "test/"
+        }
+    },
     "extra": {}
 }
