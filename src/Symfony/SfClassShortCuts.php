@@ -29,13 +29,17 @@ abstract class SfClassShortCuts
         $nameSpace = explode("\\", $rC->getName());
         $key = array_search('Entity', $nameSpace);
         if ($key === null) {
-            //hacer una exception
-            echo 'EXCEPTION';
+            throw new \Exception("Class doesn't have 'Entity' in namespace");
         }
         $nameSpace = array_slice($nameSpace, $key +1);
         return self::getBundleName($class) . ':' . join('\\', $nameSpace);
     }
 
+    /**
+     * Return the Entity Bundle Name
+     * @param  Object $class The class instance
+     * @return string        The Entity Bundle Name
+     */
     static public function getBundleName($class)
     {
     	$rC = new \ReflectionClass($class);
@@ -43,14 +47,20 @@ abstract class SfClassShortCuts
         return (count($nameSpace) >= 3) ? $nameSpace[0] . $nameSpace[1] : $nameSpace[0];
     }
 
-    static public function getControllerFullyName()
+    /**
+     * Return the Entity Controller Fully Name
+     * @param  Object $class The class instance
+     * @return string        The Controller Fully Name
+     */
+    static public function getControllerFullyName($class)
     {
-        $nameSpace = explode("\\", $this->rC->getNamespaceName());
+        $rC = new \ReflectionClass($class);
+        $nameSpace = explode("\\", $rC->getNamespaceName());
         //AppBundle\Entity
         if (count($nameSpace) == 2) {
-            return $nameSpace[0] . '\\Admin\\Controller\\' . $this->getClassName() . 'AdminController';
+            return $nameSpace[0] . '\\Controller\\' . $rC->getName() . 'Controller';
         }
         //Vendor\AppBundle\Entity
-        return $nameSpace[0] . '\\' . $nameSpace[1] . '\\Admin\\Controller\\' . $this->getClassName() . 'AdminController';
+        return $nameSpace[0] . '\\' . $nameSpace[1] . '\\Controller\\' . $rC->getName() . 'Controller';
     }
 }
