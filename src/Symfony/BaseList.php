@@ -15,25 +15,29 @@ use Symfony\Component\HttpFoundation\Request;
 use Coobix\Util\Symfony\SfClassShortCuts;
 
 /**
- * Create and manage a list of entities.
+ * Create a query to manage a list of entities.
  *
  * @author Nicolás Rizo <nicolas@coobix.com>
  */
-class BaseList
+class BaseList implements BaseListInterface
 {
+
     private $request;
     private $doctrine;
     private $class;
     private $qb;
     private $startQuery;
-    private $em;
     private $listMaxResults = 10;
-    private $entities;
-    private $url;
     private $form = null;
+  
 
-    public function __construct($doctrine, $class, $startQuery = null)
-    {
+    /**
+     * 
+     * @param type $doctrine
+     * @param string $class
+     * @param \Doctrine\ORM\QueryBuilder $startQuery
+     */
+    public function __construct($doctrine, string $class, ?\Doctrine\ORM\QueryBuilder $startQuery = null) {
         $this->request = Request::createFromGlobals();
         $this->doctrine = $doctrine;
         $this->class = $class;
@@ -41,33 +45,35 @@ class BaseList
     }
 
     /**
-     * [setStartQuery description]
-     * @param [type] $startQuery [description]
+     * Create the query to execute before filters
+     * @param mixed $startQuery The query
+     * @param string $orderBy
      */
-    public function setStartQuery($startQuery)
-    {
+    public function setStartQuery($startQuery = NULL, string $orderBy = 'createdAt') {
         if (null === $startQuery) {
             $startQuery = $this->doctrine->createQueryBuilder();
             $startQuery->select('e')->from(SfClassShortCuts::getEntityShortcutName($this->class), 'e');
-            $startQuery->orderBy('e.createdAt', 'DESC');
-            }
+            $startQuery->orderBy('e.' . $orderBy, 'DESC');
+        }
 
         $this->qb = clone $startQuery;
         $this->startQuery = $startQuery;
     }
 
-    public function getStartQuery()
-    {
+    /**
+     * Return the query to execute before filters
+     * @return \Doctrine\ORM\QueryBuilder The query
+     */
+    public function getStartQuery() {
         return $this->startQuery;
     }
 
-    
-
-    //RETORNA LAS ENTIDADES DE LA CONSULTA
-    public function getResult()
-    {
+    /**
+     * Execute list query 
+     * @return $this
+     */
+    public function getResult() {
         if ($this->form && $this->form->isSubmitted()) {
-            
             if ($this->form->isValid()) {
                 $this->applyFilters();
             }
@@ -76,154 +82,97 @@ class BaseList
         $this->applyOrder();
         $this->applyLimits();
 
-        $this->entities = $this->qb->getQuery()->getResult();
-        return $this;
+        return $this->qb->getQuery()->getResult();
     }
 
-    public function setForm($form)
-    {
+    /**
+     * Set the list form
+     * @param $this
+     */
+    public function setForm($form) {
         $this->form = $form;
         return $this;
     }
 
-    public function getQueryString()
-    {
-        return $this->request->getQueryString();
-    }
-
-    public function setEm()
-    {
-        $this->em = $this->doctrine->getManager();
-        return $this;
-    }
-
-    public function setListUrl($url)
-    {
-        $this->url = $url;
-    }
-    
-    public function getListUrl()
-    {
-        return $this->url;
-    }
-
-    public function getQb()
-    {
-        return $this->qb;
-    }
-
+    /**
+     * Get the list form
+     * @return Form
+     */
     public function getForm() {
         return $this->form;
     }
 
-    public function getEntities()
-    {
-        $this->getResult();
-        return $this->entities;
+    /**
+     * Get the Query Builder
+     * @return QueryBuilder
+     */
+    public function getQb() {
+        return $this->qb;
     }
 
-    //APLICA FILTROS EN LA CONSULTA
-    public function applyFilters()
-    {
+    /**
+     * Apply list filters
+     * @return $this
+     */
+    public function applyFilters() {
         $this->createFormFiltersClause();
         $this->createJoinClause();
         //$this->createLeftJoinClause();
-        $this->createOrderClause();
+        //$this->createOrderClause();
+        return $this;
     }
 
-    //APLICA ORDEN EN LA CONSULTA
-    public function applyOrder()
-    {
+    /**
+     * Apply list order
+     * @return $this
+     */
+    public function applyOrder() {
         $this->createOrderClause();
+        return $this;
     }
 
-    //APLICA LIMITES EN LA CONSULTA
-    public function applyLimits()
-    {
+    /**
+     * Apply list limits
+     * @return $this
+     */
+    public function applyLimits() {
         $this->qb->setFirstResult($this->getListOffSet());
         $this->qb->setMaxResults($this->getListMaxResults());
+        return $this;
     }
 
-    public function createJoinClause()
-    { 
-        $classMetaData = $this->doctrine->getClassMetadata($this->class);
-
-        $rfClass = $classMetaData->getReflectionClass();
-
-        $listSearchFormName = strtolower('list_search');
-        if ($this->request->query->has($listSearchFormName)) {
-            $formFilters = $this->request->query->get($listSearchFormName);
-
-            //$aliasAscii es la letra "a" pero en codigo ascii
-            //es decir el 97 = a. Esto es para ir cambiando a->b->c con el fin
-            //de que no sean iguales los identificadores de los paramtros
-            $aliasAscii = 97;
-            foreach ($formFilters as $k => $v) {
-                if ($v == "") {
-                    continue;
-                }
-                try {
-                    $field = $classMetaData->getAssociationMapping($k);
-
-                    $this->qb->join('e.' . $field['fieldName'], chr($aliasAscii), 'WITH', chr($aliasAscii) . '.id = :' . chr($aliasAscii) . '_id', chr($aliasAscii) . '.id');
-                    $this->qb->setParameter(chr($aliasAscii) . '_id', $v);
-
-                    $aliasAscii++;
-                    if ($aliasAscii == 101) {
-                        $aliasAscii++;
-                    }
-                } catch (\Doctrine\ORM\Mapping\MappingException $exc) {
-                    //continue;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    /*
-     * Crea los filtros de la consulta del listado,
-     * cuando utilizan el formulario de
-     * busqueda avanzada.
+    /**
+     * Create query filters if the advanced search form has been used
+     * @param  string $listSearchFormName The form name
+     * @return [type]                     [description]
      */
+    public function createFormFiltersClause(string $listSearchFormName = 'list_search') {
 
-    public function createFormFiltersClause()
-    {
-
-        //Si no enviaron el formulario
-        $listSearchFormName = strtolower('list_search');
         if (!$this->request->query->has($listSearchFormName)) {
             return true;
         }
 
-
-        //Si lo utilizaron
-        //Guardo los filtros
+        //Get request filters
         $formFilters = $this->request->query->get($listSearchFormName);
 
-        //Traigo el Entity Manager
+        //Get class mapping information
         $classMetaData = $this->doctrine->getClassMetadata($this->class);
-        $rfClass = $classMetaData->getReflectionClass();
 
-
-        //Empiezo a recorrer los filtros que enviaron.
-        //Ej: ?edad=10
-        //k: edad, v: 10
+        //Loop into the request filters.
+        //Ej: ?age=10
+        //k: age, v: 10
         foreach ($formFilters as $k => $v) {
-            //Si el filtro no tiene valor, sigue.
+            //If is it empty.
             if ($v == "") {
                 continue;
             }
-
-            //Si tiene una valor el filtro
-            //intento recuperar la propiedad del objeto.
+            //The filter name has to match with the object properties
+            //Get the field mapping information.
             try {
                 $fieldMapping = $classMetaData->getFieldMapping($k);
             } catch (\Doctrine\ORM\Mapping\MappingException $exc) {
                 continue;
             }
-
-
 
             switch ($fieldMapping['type']) {
                 case 'string':
@@ -240,7 +189,6 @@ class BaseList
                     $this->qb->setParameter('e_' . $k, $v);
                     break;
                 case 'datetime':
-
                     $cs = ' e.' . $k . ' >= :e_desde_' . $k;
                     //31-01-2015 = dd-mm-aaaa
                     $fechaString = $v;
@@ -294,6 +242,7 @@ class BaseList
                              */
                         }
                     } catch (\Exception $exc) {
+                        
                     }
 
                     break;
@@ -301,8 +250,47 @@ class BaseList
         }
     }
 
-    public function createOrderClause()
-    {
+    protected function createJoinClause($number) {
+        $classMetaData = $this->doctrine->getClassMetadata($this->class);
+
+        $rfClass = $classMetaData->getReflectionClass();
+
+        $listSearchFormName = strtolower('list_search');
+        if ($this->request->query->has($listSearchFormName)) {
+            $formFilters = $this->request->query->get($listSearchFormName);
+
+            //$aliasAscii es la letra "a" pero en codigo ascii
+            //es decir el 97 = a. Esto es para ir cambiando a->b->c con el fin
+            //de que no sean iguales los identificadores de los paramtros
+            $aliasAscii = 97;
+            foreach ($formFilters as $k => $v) {
+                if ($v == "") {
+                    continue;
+                }
+                try {
+                    $field = $classMetaData->getAssociationMapping($k);
+
+                    $this->qb->join('e.' . $field['fieldName'], chr($aliasAscii), 'WITH', chr($aliasAscii) . '.id = :' . chr($aliasAscii) . '_id', chr($aliasAscii) . '.id');
+                    $this->qb->setParameter(chr($aliasAscii) . '_id', $v);
+
+                    $aliasAscii++;
+                    if ($aliasAscii == 101) {
+                        $aliasAscii++;
+                    }
+                } catch (\Doctrine\ORM\Mapping\MappingException $exc) {
+                    //continue;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * [createOrderClause description]
+     * @return [type] [description]
+     */
+    protected function createOrderClause() {
         //ME FIJO SI ESTAN ORDENANDO CON LOS LINKS DEL LISTADO
         if ($this->request->query->has("_sortBy")) {
             $sortBy = $this->request->query->get("_sortBy");
@@ -349,15 +337,21 @@ class BaseList
         return $this;
     }
 
-    public function getListOffSet()
-    {
+    /**
+     * Get the list offset
+     * @return int the list offset
+     */
+    protected function getListOffSet(): int {
         $listOffSet = ($this->getListPage() * $this->getListMaxResults()) - $this->getListMaxResults();
 
         return $listOffSet;
     }
 
-    public function getListPage()
-    {
+    /**
+     * Get the current Page number from the list
+     * @return int Page number
+     */
+    public function getListPage(): int {
         $page = 1;
         if ($this->request->query->has('_page')) {
             $page = $this->request->query->get('_page');
@@ -366,35 +360,23 @@ class BaseList
         return $page;
     }
 
-    public function getListMaxResults()
-    {
+    /**
+     * Get max results per list page
+     * @return int the max results per page
+     */
+    public function getListMaxResults(): int {
         if ($this->request->query->has('_limit')) {
             $this->listMaxResults = $this->request->query->get('_limit');
         }
         return $this->listMaxResults;
     }
 
-    public function createLeftJoinClause()
-    {
-        $sortBy = $this->request->query->get('_sortBy');
-        //ME FIJO SI EL CAMPO QUE MANDARON POR GET ES ALGUNO DE LOS QUE FILTRA
-        foreach ($this->fields as $f) {
-            if ($f->getName() === $sortBy) {
-                //ME FIJO SI ES UN CAMPO DE TIPO ENTIDAD
-                if ($f->getType() === 'entity') {
-                    $orderByField = $f;
-                    break;
-                }
-            }
-        }
-        //SI EXISTE EL CAMPO
-        if (isset($orderByField)) {
-            $this->qb->leftJoin('e.' . $orderByField->getName(), 'f');
-        }
-    }
-
-    public function getColFilterUrl($fieldName)
-    {
+    /**
+     * Get the url en each list column tittle to make ordering
+     * @param  string $fieldName the column name
+     * @return string            The url
+     */
+    public function getColFilterUrl(string $fieldName): string {
         $urlGetParams = $this->request->query->all();
 
         if (isset($urlGetParams["_sortBy"]) && $urlGetParams["_sortBy"] === $fieldName) {
@@ -408,5 +390,4 @@ class BaseList
         //return '?' . http_build_query($urlGetParams, '', '&');
     }
 
-    
 }

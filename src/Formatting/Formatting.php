@@ -1,6 +1,6 @@
 <?php
 
-namespace Coobix\AdminBundle\Model;
+namespace Coobix\Util\Formatting;
 
 abstract class Formatting {
     
