@@ -250,7 +250,7 @@ class BaseList implements BaseListInterface
         }
     }
 
-    protected function createJoinClause($number) {
+    protected function createJoinClause() {
         $classMetaData = $this->doctrine->getClassMetadata($this->class);
 
         $rfClass = $classMetaData->getReflectionClass();
